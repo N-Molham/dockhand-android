@@ -37,7 +37,7 @@ class DockhandService(
     private val allowCleartext: Boolean = false,
     private val customHeaders: Map<String, String> = emptyMap(),
     client: OkHttpClient = defaultClient
-) {
+) : DockhandApi {
     val token: String = DockhandToken.normalized(token)
 
     private val baseHttpUrl: HttpUrl = baseUrl.trim().let { trimmed ->
@@ -73,45 +73,45 @@ class DockhandService(
             .build()
     }
 
-    suspend fun fetchHealthStatus(): String {
+    override suspend fun fetchHealthStatus(): String {
         val request = Request.Builder().url(requestUrl("api/health")).get().build()
         val (status, text) = executeText(request)
         if (status != 200) throw DockhandServiceError.UnexpectedStatus(status)
         return dockhandJson.decodeFromString<Health>(text).status
     }
 
-    suspend fun fetchEnvironments(): List<Environment> {
+    override suspend fun fetchEnvironments(): List<Environment> {
         val request = Request.Builder().url(requestUrl("api/environments")).get().build()
         val (status, text) = executeText(request)
         if (status !in 200..299) throw DockhandServiceError.UnexpectedStatus(status)
         return DockhandDecoding.decodeEnvironments(text)
     }
 
-    suspend fun fetchContainers(environmentID: Int): List<Container> =
+    override suspend fun fetchContainers(environmentID: Int): List<Container> =
         fetchList("api/containers", environmentID)
 
-    suspend fun fetchImages(environmentID: Int): List<ImageSummary> =
+    override suspend fun fetchImages(environmentID: Int): List<ImageSummary> =
         fetchList("api/images", environmentID)
 
-    suspend fun fetchStacks(environmentID: Int): List<StackSummary> =
+    override suspend fun fetchStacks(environmentID: Int): List<StackSummary> =
         fetchList("api/stacks", environmentID)
 
-    suspend fun fetchDashboardStats(environmentID: Int): DashboardEnvironmentSnapshot =
+    override suspend fun fetchDashboardStats(environmentID: Int): DashboardEnvironmentSnapshot =
         DockhandDecoding.decodeDashboardStats(
             performJsonObject("api/dashboard/stats", "GET", environmentID).toString()
         )
 
-    suspend fun fetchDashboardHost(environmentID: Int): DashboardHostSnapshot =
+    override suspend fun fetchDashboardHost(environmentID: Int): DashboardHostSnapshot =
         DockhandDecoding.decodeDashboardHost(
             performJsonObject("api/system", "GET", environmentID).toString()
         )
 
-    suspend fun fetchPendingContainerUpdates(environmentID: Int): List<PendingContainerUpdate> =
+    override suspend fun fetchPendingContainerUpdates(environmentID: Int): List<PendingContainerUpdate> =
         DockhandDecoding.decodePendingUpdates(
             performJsonObject("api/containers/pending-updates", "GET", environmentID).toString()
         )
 
-    suspend fun startContainerUpdateCheck(environmentID: Int): ContainerUpdateCheckOperation {
+    override suspend fun startContainerUpdateCheck(environmentID: Int): ContainerUpdateCheckOperation {
         val response = performJsonObject("api/containers/check-updates", "POST", environmentID)
         val jobID = response.string("jobId")
         if (!jobID.isNullOrEmpty()) return ContainerUpdateCheckOperation.Job(jobID)
@@ -120,14 +120,14 @@ class DockhandService(
         )
     }
 
-    suspend fun fetchContainerUpdateCheckJob(id: String): ContainerUpdateCheckJobSnapshot {
+    override suspend fun fetchContainerUpdateCheckJob(id: String): ContainerUpdateCheckJobSnapshot {
         val request = Request.Builder().url(requestUrl("api/jobs/$id")).get().build()
         val (status, text) = executeText(request)
         validateResponse(status, text)
         return dockhandJson.decodeFromString<ContainerUpdateCheckJobSnapshot>(text)
     }
 
-    suspend fun updateContainers(ids: List<String>, environmentID: Int): ContainerBatchUpdateResponse {
+    override suspend fun updateContainers(ids: List<String>, environmentID: Int): ContainerBatchUpdateResponse {
         if (ids.isEmpty()) throw DockhandServiceError.InvalidResponse
         val body = buildJsonObject {
             putJsonArray("containerIds") { ids.forEach { add(it) } }
@@ -141,15 +141,15 @@ class DockhandService(
         return dockhandJson.decodeFromString<ContainerBatchUpdateResponse>(response.toString())
     }
 
-    suspend fun fetchVolumes(environmentID: Int): List<VolumeSnapshot> =
+    override suspend fun fetchVolumes(environmentID: Int): List<VolumeSnapshot> =
         DockhandDecoding.decodeVolumes(performJsonArrayText("api/volumes", "GET", environmentID))
 
-    suspend fun fetchNetworks(environmentID: Int): List<NetworkSnapshot> =
+    override suspend fun fetchNetworks(environmentID: Int): List<NetworkSnapshot> =
         DockhandDecoding.decodeNetworks(performJsonArrayText("api/networks", "GET", environmentID))
 
-    suspend fun fetchContainerActivity(
+    override suspend fun fetchContainerActivity(
         environmentID: Int,
-        limit: Int = 100
+        limit: Int
     ): ContainerActivitySnapshot = DockhandDecoding.decodeActivity(
         performJsonObject(
             "api/activity",
@@ -162,7 +162,7 @@ class DockhandService(
         ).toString()
     )
 
-    suspend fun clearPendingContainerUpdate(containerID: String, environmentID: Int) {
+    override suspend fun clearPendingContainerUpdate(containerID: String, environmentID: Int) {
         val response = performJsonObject(
             "api/containers/pending-updates",
             "DELETE",
@@ -172,7 +172,7 @@ class DockhandService(
         if (response.bool("success") != true) throw DockhandServiceError.InvalidResponse
     }
 
-    suspend fun fetchStackEditorDocument(name: String, environmentID: Int): StackEditorDocument =
+    override suspend fun fetchStackEditorDocument(name: String, environmentID: Int): StackEditorDocument =
         coroutineScope {
             val composeDocument = async { fetchStackComposeDocument(name, environmentID) }
             val envDocument = async { fetchStackEnvDocument(name, environmentID) }
@@ -190,10 +190,10 @@ class DockhandService(
             )
         }
 
-    suspend fun fetchContainerLogs(
+    override suspend fun fetchContainerLogs(
         containerID: String,
         environmentID: Int,
-        tail: Int = 200
+        tail: Int
     ): ContainerLogsDocument {
         val request = jsonRequest(
             "api/containers/$containerID/logs",
@@ -206,7 +206,7 @@ class DockhandService(
         return ContainerLogsDocument(dockhandJson.decodeFromString<ContainerLogsResponse>(text).logs)
     }
 
-    suspend fun fetchContainerShells(
+    override suspend fun fetchContainerShells(
         containerID: String,
         environmentID: Int
     ): ContainerShellDetectionResult {
@@ -222,7 +222,7 @@ class DockhandService(
         )
     }
 
-    fun makeContainerShellRequest(
+    override fun makeContainerShellRequest(
         containerID: String,
         environmentID: Int,
         shell: String,
@@ -243,10 +243,10 @@ class DockhandService(
         return builder.build()
     }
 
-    fun streamContainerLogs(
+    override fun streamContainerLogs(
         containerID: String,
         environmentID: Int,
-        tail: Int = 200
+        tail: Int
     ): Flow<ContainerLogEvent> = channelFlow {
         val producer = this
         val request = jsonRequest(
@@ -278,10 +278,10 @@ class DockhandService(
         }
     }
 
-    suspend fun startImagePull(
+    override suspend fun startImagePull(
         imageName: String,
         environmentID: Int,
-        tag: String? = null
+        tag: String?
     ): ImagePullStartResult {
         val body = buildJsonObject {
             put("image", imageName)
@@ -305,14 +305,14 @@ class DockhandService(
         throw DockhandServiceError.InvalidResponse
     }
 
-    suspend fun fetchImagePullJob(id: String): ImagePullJobSnapshot {
+    override suspend fun fetchImagePullJob(id: String): ImagePullJobSnapshot {
         val request = Request.Builder().url(requestUrl("api/jobs/$id")).get().build()
         val (status, text) = executeText(request)
         validateResponse(status, text)
         return dockhandJson.decodeFromString<ImagePullJobSnapshot>(text)
     }
 
-    suspend fun pruneImages(environmentID: Int, danglingOnly: Boolean) {
+    override suspend fun pruneImages(environmentID: Int, danglingOnly: Boolean) {
         val additionalQuery = if (danglingOnly) emptyList() else listOf("dangling" to "false")
         val response = performJsonObject(
             "api/prune/images",
@@ -326,7 +326,7 @@ class DockhandService(
         throw DockhandServiceError.InvalidResponse
     }
 
-    suspend fun tagImage(imageID: String, environmentID: Int, repo: String, tag: String) {
+    override suspend fun tagImage(imageID: String, environmentID: Int, repo: String, tag: String) {
         val body = buildJsonObject {
             put("repo", repo)
             put("tag", tag)
@@ -341,7 +341,7 @@ class DockhandService(
         throw DockhandServiceError.Message(response.string("error") ?: "Failed to tag image")
     }
 
-    suspend fun deleteImage(imageReference: String, environmentID: Int) {
+    override suspend fun deleteImage(imageReference: String, environmentID: Int) {
         val response = performJsonObject("api/images/$imageReference", "DELETE", environmentID)
         if (response.bool("success") == true || response.string("status") == "complete") return
         val error = response.string("error")
@@ -349,7 +349,7 @@ class DockhandService(
         throw DockhandServiceError.InvalidResponse
     }
 
-    suspend fun deleteImageTag(imageTag: String, environmentID: Int) {
+    override suspend fun deleteImageTag(imageTag: String, environmentID: Int) {
         val body = buildJsonObject {
             put("operation", "remove")
             put("entityType", "images")
@@ -370,7 +370,7 @@ class DockhandService(
         throw DockhandServiceError.InvalidResponse
     }
 
-    suspend fun scanImage(imageName: String, environmentID: Int): ImageScanDocument {
+    override suspend fun scanImage(imageName: String, environmentID: Int): ImageScanDocument {
         val body = buildJsonObject { put("imageName", imageName) }
         val response = performJsonObject("api/images/scan", "POST", environmentID, body = body.toString())
         val error = response.string("error")
@@ -389,22 +389,22 @@ class DockhandService(
         )
     }
 
-    suspend fun startContainer(containerID: String, environmentID: Int) =
+    override suspend fun startContainer(containerID: String, environmentID: Int) =
         containerAction("start", containerID, environmentID)
 
-    suspend fun stopContainer(containerID: String, environmentID: Int) =
+    override suspend fun stopContainer(containerID: String, environmentID: Int) =
         containerAction("stop", containerID, environmentID)
 
-    suspend fun restartContainer(containerID: String, environmentID: Int) =
+    override suspend fun restartContainer(containerID: String, environmentID: Int) =
         containerAction("restart", containerID, environmentID)
 
-    suspend fun pauseContainer(containerID: String, environmentID: Int) =
+    override suspend fun pauseContainer(containerID: String, environmentID: Int) =
         containerAction("pause", containerID, environmentID)
 
-    suspend fun unpauseContainer(containerID: String, environmentID: Int) =
+    override suspend fun unpauseContainer(containerID: String, environmentID: Int) =
         containerAction("unpause", containerID, environmentID)
 
-    suspend fun stackAction(action: StackAction, stackName: String, environmentID: Int) {
+    override suspend fun stackAction(action: StackAction, stackName: String, environmentID: Int) {
         val response = performJsonObject(
             "api/stacks/$stackName/${action.endpoint}",
             "POST",
@@ -413,7 +413,7 @@ class DockhandService(
         stackResultOrThrow(response)
     }
 
-    suspend fun redeployStack(
+    override suspend fun redeployStack(
         stackName: String,
         environmentID: Int,
         options: StackDeployOptions
@@ -427,7 +427,7 @@ class DockhandService(
         stackResultOrThrow(response)
     }
 
-    suspend fun startStackRedeploy(
+    override suspend fun startStackRedeploy(
         stackName: String,
         environmentID: Int,
         options: StackDeployOptions
@@ -452,14 +452,14 @@ class DockhandService(
         return StackRedeployStartResult.Completed(result)
     }
 
-    suspend fun fetchStackRedeployJob(id: String): StackRedeployJobSnapshot {
+    override suspend fun fetchStackRedeployJob(id: String): StackRedeployJobSnapshot {
         val request = Request.Builder().url(requestUrl("api/jobs/$id")).get().build()
         val (status, text) = executeText(request)
         validateResponse(status, text)
         return dockhandJson.decodeFromString<StackRedeployJobSnapshot>(text)
     }
 
-    suspend fun deleteStack(stackName: String, environmentID: Int, deleteVolumes: Boolean) {
+    override suspend fun deleteStack(stackName: String, environmentID: Int, deleteVolumes: Boolean) {
         val additionalQuery = buildList {
             add("force" to "true")
             if (deleteVolumes) add("volumes" to "true")
@@ -473,7 +473,7 @@ class DockhandService(
         stackResultOrThrow(response)
     }
 
-    suspend fun updateStackCompose(
+    override suspend fun updateStackCompose(
         name: String,
         environmentID: Int,
         request: UpdateStackComposeRequest
@@ -493,7 +493,7 @@ class DockhandService(
         }
     }
 
-    suspend fun updateStackEnvFile(
+    override suspend fun updateStackEnvFile(
         name: String,
         environmentID: Int,
         request: UpdateRawEnvRequest
