@@ -54,6 +54,7 @@ import pro.dockhand.mobile.api.isDockhandCancellation
 import pro.dockhand.mobile.app.AppViewModel
 import pro.dockhand.mobile.ui.ContainerAction
 import pro.dockhand.mobile.ui.ContainerListFilter
+import pro.dockhand.mobile.ui.canOpenShell
 import pro.dockhand.mobile.ui.canPerform
 import pro.dockhand.mobile.ui.localizedDockhandStateLabel
 import pro.dockhand.mobile.ui.localizedDockerRuntimeText
@@ -69,8 +70,20 @@ fun ContainersScreen(viewModel: AppViewModel, modifier: Modifier = Modifier) {
     val store = remember { ContainersStore() }
     val snackbarHostState = remember { SnackbarHostState() }
     var selectedContainer by remember { mutableStateOf<Container?>(null) }
+    var shellContainer by remember { mutableStateOf<Container?>(null) }
     var selectedFilter by remember { mutableStateOf<ContainerListFilter>(ContainerListFilter.All) }
     var pendingAction by remember { mutableStateOf<PendingContainerAction?>(null) }
+
+    val openShell = shellContainer
+    if (openShell != null) {
+        ContainerShellScreen(
+            viewModel = viewModel,
+            container = openShell,
+            onBack = { shellContainer = null },
+            modifier = modifier
+        )
+        return
+    }
 
     val openContainer = selectedContainer
     if (openContainer != null) {
@@ -173,6 +186,7 @@ fun ContainersScreen(viewModel: AppViewModel, modifier: Modifier = Modifier) {
                                         actionsEnabled = store.activeActionID == null,
                                         showProgress = store.isRunningFor(item.id),
                                         onOpen = { selectedContainer = item },
+                                        onOpenShell = { shellContainer = item },
                                         onAction = { action ->
                                             if (action == ContainerAction.STOP || action == ContainerAction.RESTART) {
                                                 pendingAction = PendingContainerAction(item, action)
@@ -226,6 +240,7 @@ private fun ContainerRow(
     actionsEnabled: Boolean,
     showProgress: Boolean,
     onOpen: () -> Unit,
+    onOpenShell: () -> Unit,
     onAction: (ContainerAction) -> Unit
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
@@ -311,6 +326,16 @@ private fun ContainerRow(
                     }
                 }
                 DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
+                    if (container.canOpenShell) {
+                        DropdownMenuItem(
+                            text = { Text("Open shell") },
+                            enabled = actionsEnabled,
+                            onClick = {
+                                menuExpanded = false
+                                onOpenShell()
+                            }
+                        )
+                    }
                     actions.forEach { action ->
                         DropdownMenuItem(
                             text = { Text(action.title) },
