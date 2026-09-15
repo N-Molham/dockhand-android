@@ -61,6 +61,8 @@ class AppViewModel(
 
     private var token: String = ""
     private var customHeaders: Map<String, String> = emptyMap()
+    private var cachedService: DockhandApi? = null
+    private var cachedServiceConfig: DockhandServiceConfig? = null
 
     init {
         scope.launch { loadPersistedState() }
@@ -84,14 +86,17 @@ class AppViewModel(
     fun service(): DockhandApi? {
         val profile = selectedProfile ?: return null
         val normalized = DockhandServerAddress.normalized(profile.baseUrl) ?: return null
-        return serviceFactory(
-            DockhandServiceConfig(
-                baseUrl = normalized,
-                token = token,
-                allowCleartext = profile.allowCleartext,
-                customHeaders = customHeaders
-            )
+        val config = DockhandServiceConfig(
+            baseUrl = normalized,
+            token = token,
+            allowCleartext = profile.allowCleartext,
+            customHeaders = customHeaders
         )
+        cachedService?.let { if (cachedServiceConfig == config) return it }
+        return serviceFactory(config).also {
+            cachedService = it
+            cachedServiceConfig = config
+        }
     }
 
     fun bootstrap() {
@@ -275,6 +280,14 @@ class AppViewModel(
 
     fun requestDashboardRefresh() {
         _state.update { it.copy(dashboardRefreshRevision = it.dashboardRefreshRevision + 1) }
+    }
+
+    fun selectEnvironmentInScope(environmentId: Int) {
+        scope.launch { selectEnvironment(environmentId) }
+    }
+
+    fun refreshCurrentScreen() {
+        scope.launch { refreshEnvironments() }
     }
 
     private suspend fun loadPersistedState() {
