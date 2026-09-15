@@ -60,6 +60,7 @@ dependencies {
     implementation(libs.compose.material.icons.core)
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.kotlinx.serialization.json)
+    implementation(libs.snakeyaml.engine)
     implementation(libs.okhttp)
     implementation(libs.okhttp.sse)
 

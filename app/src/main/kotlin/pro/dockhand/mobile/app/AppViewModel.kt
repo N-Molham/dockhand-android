@@ -290,6 +290,43 @@ class AppViewModel(
         scope.launch { refreshEnvironments() }
     }
 
+    fun selectServerProfileInScope(profileId: String, forceEnvironmentReset: Boolean = false) {
+        scope.launch { selectServerProfile(profileId, forceEnvironmentReset) }
+    }
+
+    fun saveServerProfileInScope(
+        profileId: String?,
+        name: String,
+        baseUrlText: String,
+        tokenValue: String,
+        allowCleartext: Boolean = false,
+        makeActive: Boolean = true
+    ) {
+        scope.launch {
+            saveServerProfile(profileId, name, baseUrlText, tokenValue, allowCleartext, makeActive)
+        }
+    }
+
+    fun deleteServerProfileInScope(profileId: String) {
+        scope.launch { deleteServerProfile(profileId) }
+    }
+
+    fun refreshEnvironmentsInScope() {
+        scope.launch { refreshEnvironments() }
+    }
+
+    suspend fun customHeaders(profileId: String): Map<String, String> =
+        secureStore.readCustomHeaders(profileId)
+
+    suspend fun saveCustomHeaders(profileId: String, headers: Map<String, String>) {
+        secureStore.writeCustomHeaders(profileId, headers)
+        if (profileId == _state.value.selectedProfileId) {
+            customHeaders = headers
+            cachedService = null
+            cachedServiceConfig = null
+        }
+    }
+
     private suspend fun loadPersistedState() {
         val profiles = preferences.loadProfiles()
         val storedProfileId = preferences.loadSelectedProfileId()
