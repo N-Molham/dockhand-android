@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Platform-level cleartext is permitted so users can reach self-hosted Dockhand
+     servers on http:// hosts. App-level policy (OkHttp interceptor) is the real
+     gate: cleartext requests are only sent to hosts explicitly approved per
+     server profile, and https is always preferred. -->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>
