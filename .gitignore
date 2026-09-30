@@ -9,3 +9,7 @@ captures/
 *.aab
 *.keystore
 !debug.keystore
+*.jks
+keystore.properties
+keystore/
+*.base64
