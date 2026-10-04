@@ -1,6 +1,7 @@
 package pro.dockhand.mobile.ui
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -55,6 +56,7 @@ fun DockhandApp(viewModel: AppViewModel) {
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
             EnvironmentHeaderBar(
                 state = state,
