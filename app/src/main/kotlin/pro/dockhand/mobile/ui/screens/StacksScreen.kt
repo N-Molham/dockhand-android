@@ -1,6 +1,7 @@
 package pro.dockhand.mobile.ui.screens
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -8,6 +9,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -17,6 +19,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -38,7 +42,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -79,6 +82,7 @@ import pro.dockhand.mobile.app.AppViewModel
 import pro.dockhand.mobile.ui.CodeHighlightCache
 import pro.dockhand.mobile.ui.ContainerAction
 import pro.dockhand.mobile.ui.EnvLineHighlighter
+import pro.dockhand.mobile.ui.LineNumberGutter
 import pro.dockhand.mobile.ui.YamlLineHighlighter
 import pro.dockhand.mobile.ui.canPerform
 import pro.dockhand.mobile.ui.codeHighlightTransformation
@@ -1184,11 +1188,13 @@ private fun StackEditor(
             }
         }
 
-        val editorModifier = Modifier.fillMaxWidth().weight(1f)
         val editorTextStyle = MaterialTheme.typography.bodySmall.copy(
             fontFamily = FontFamily.Monospace,
-            fontSize = 13.sp
+            fontSize = 13.sp,
+            lineHeight = 18.sp
         )
+        val verticalScrollState = rememberScrollState()
+        val horizontalScrollState = rememberScrollState()
         val highlightColors = rememberCodeHighlightColors()
         val highlightCache = remember(activePane) {
             CodeHighlightCache(
@@ -1206,24 +1212,46 @@ private fun StackEditor(
         val highlightTransformation = remember(highlightVersion, highlightColors, activePane) {
             codeHighlightTransformation(highlightColors, highlightCache)
         }
-        if (activePane == 0) {
-            OutlinedTextField(
-                value = composeText,
-                onValueChange = { composeText = it },
-                modifier = editorModifier,
-                label = { Text("Compose file") },
-                textStyle = editorTextStyle,
-                visualTransformation = highlightTransformation
-            )
-        } else {
-            OutlinedTextField(
-                value = envText,
-                onValueChange = { envText = it },
-                modifier = editorModifier,
-                label = { Text("Environment file") },
-                textStyle = editorTextStyle,
-                visualTransformation = highlightTransformation
-            )
+        val lineCount = visibleText.count { it == '\n' } + 1
+        val gutterWidth = ((lineCount.toString().length * 8) + 20).dp
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f)
+                .border(
+                    width = 1.dp,
+                    color = MaterialTheme.colorScheme.outline,
+                    shape = RoundedCornerShape(4.dp)
+                )
+                .padding(vertical = 10.dp)
+        ) {
+            Row(modifier = Modifier.fillMaxSize()) {
+                LineNumberGutter(
+                    lineCount = lineCount,
+                    scrollState = verticalScrollState,
+                    textStyle = editorTextStyle,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                    modifier = Modifier
+                        .width(gutterWidth)
+                        .fillMaxHeight()
+                        .verticalScroll(verticalScrollState)
+                        .padding(start = 4.dp, end = 8.dp)
+                )
+                BasicTextField(
+                    value = visibleText,
+                    onValueChange = { updated ->
+                        if (activePane == 0) composeText = updated else envText = updated
+                    },
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                        .horizontalScroll(horizontalScrollState)
+                        .verticalScroll(verticalScrollState)
+                        .padding(start = 4.dp, end = 8.dp),
+                    textStyle = editorTextStyle,
+                    visualTransformation = highlightTransformation
+                )
+            }
         }
     }
 }

@@ -1,15 +1,23 @@
 package pro.dockhand.mobile.ui
 
+import androidx.compose.foundation.ScrollState
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.OffsetMapping
 import androidx.compose.ui.text.input.TransformedText
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.style.TextAlign
 
 enum class CodeTokenType {
     KEY,
@@ -223,77 +231,46 @@ fun codeHighlightTransformation(
     if (raw.length > MAX_HIGHLIGHT_CHARS) {
         TransformedText(text, OffsetMapping.Identity)
     } else {
-        val lineCount = raw.count { it == '\n' } + 1
-        val digits = lineCount.toString().length
-        val prefixWidth = digits + 3
-        val builder = AnnotatedString.Builder()
+        val builder = AnnotatedString.Builder(raw)
         var lineStart = 0
-        var lineIndex = 0
         while (lineStart <= raw.length) {
             val newlineIndex = raw.indexOf('\n', lineStart)
             val lineEnd = if (newlineIndex == -1) raw.length else newlineIndex
             val line = raw.substring(lineStart, lineEnd)
-
-            val prefix = (lineIndex + 1).toString().padStart(digits) + " │ "
-            val prefixStart = builder.length
-            builder.append(prefix)
-            builder.addStyle(
-                SpanStyle(color = colors.comment),
-                prefixStart,
-                prefixStart + prefixWidth
-            )
-
-            val contentStart = builder.length
-            builder.append(line)
             cache.spansFor(line).forEach { span ->
                 builder.addStyle(
                     styleFor(colors, span.type),
-                    contentStart + span.start,
-                    contentStart + span.end
+                    lineStart + span.start,
+                    lineStart + span.end
                 )
             }
-
             if (newlineIndex == -1) break
-            builder.append('\n')
             lineStart = newlineIndex + 1
-            lineIndex++
         }
-        TransformedText(builder.toAnnotatedString(), LineNumberOffsetMapping(raw, digits))
+        TransformedText(builder.toAnnotatedString(), OffsetMapping.Identity)
     }
 }
 
-private class LineNumberOffsetMapping(
-    raw: String,
-    digits: Int
-) : OffsetMapping {
-
-    private val prefixWidth = digits + 3
-    private val lineStarts: IntArray = buildList {
-        add(0)
-        raw.forEachIndexed { index, character ->
-            if (character == '\n') add(index + 1)
+@Composable
+fun LineNumberGutter(
+    lineCount: Int,
+    scrollState: ScrollState,
+    textStyle: TextStyle,
+    color: Color,
+    modifier: Modifier = Modifier
+) {
+    val digits = lineCount.toString().length
+    Column(modifier = modifier.verticalScroll(scrollState)) {
+        repeat(lineCount) { index ->
+            Text(
+                text = (index + 1).toString().padStart(digits),
+                style = textStyle,
+                color = color,
+                textAlign = TextAlign.End,
+                maxLines = 1,
+                modifier = Modifier.fillMaxWidth()
+            )
         }
-    }.toIntArray()
-
-    override fun originalToTransformed(offset: Int): Int {
-        val clamped = offset.coerceIn(0, lineStarts.last())
-        var line = 0
-        for (index in lineStarts.indices) {
-            if (lineStarts[index] <= clamped) line = index else break
-        }
-        return clamped + (line + 1) * prefixWidth
-    }
-
-    override fun transformedToOriginal(offset: Int): Int {
-        if (offset <= 0) return 0
-        var line = 0
-        for (index in lineStarts.indices) {
-            val contentStart = lineStarts[index] + (index + 1) * prefixWidth
-            if (contentStart <= offset) line = index else break
-        }
-        val original = offset - (line + 1) * prefixWidth
-        val lineEnd = if (line + 1 < lineStarts.size) lineStarts[line + 1] else lineStarts.last()
-        return original.coerceIn(lineStarts[line], lineEnd)
     }
 }
 
