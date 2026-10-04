@@ -7,6 +7,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import pro.dockhand.mobile.api.DockhandApi
 import pro.dockhand.mobile.api.DockhandConnectionStage
 import pro.dockhand.mobile.api.DockhandConnectionStageException
@@ -63,9 +65,25 @@ class AppViewModel(
     private var customHeaders: Map<String, String> = emptyMap()
     private var cachedService: DockhandApi? = null
     private var cachedServiceConfig: DockhandServiceConfig? = null
+    private var initialized = false
+    private val initializationMutex = Mutex()
 
     init {
-        scope.launch { loadPersistedState() }
+        scope.launch { initializeIfNeeded() }
+    }
+
+    private suspend fun initializeIfNeeded() {
+        var justInitialized = false
+        initializationMutex.withLock {
+            if (!initialized) {
+                loadPersistedState()
+                initialized = true
+                justInitialized = true
+            }
+        }
+        if (justInitialized) {
+            refreshEnvironments(forceEnvironmentReset = false)
+        }
     }
 
     val selectedProfile: ServerProfile?
@@ -111,6 +129,7 @@ class AppViewModel(
         allowCleartext: Boolean = false,
         makeActive: Boolean = true
     ) {
+        initializeIfNeeded()
         val cleanedName = name.trim()
         val cleanedUrl = baseUrlText.trim()
         val resolvedName = cleanedName.ifEmpty { cleanedUrl }
@@ -148,6 +167,7 @@ class AppViewModel(
     }
 
     suspend fun deleteServerProfile(profileId: String) {
+        initializeIfNeeded()
         val profiles = _state.value.serverProfiles.filterNot { it.id == profileId }
         _state.update { it.copy(serverProfiles = profiles) }
         preferences.saveProfiles(profiles)
@@ -175,6 +195,7 @@ class AppViewModel(
     }
 
     suspend fun selectServerProfile(profileId: String, forceEnvironmentReset: Boolean = false) {
+        initializeIfNeeded()
         if (_state.value.selectedProfileId == profileId && !forceEnvironmentReset) return
 
         _state.update {

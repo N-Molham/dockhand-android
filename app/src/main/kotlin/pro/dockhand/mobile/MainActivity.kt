@@ -7,18 +7,16 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.core.PreferenceDataStoreFactory
-import androidx.datastore.preferences.preferencesDataStoreFile
+import androidx.datastore.preferences.preferencesDataStore
 import androidx.lifecycle.lifecycleScope
-import java.io.File
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import pro.dockhand.mobile.app.AppViewModel
 import pro.dockhand.mobile.data.DataStorePreferencesRepository
 import pro.dockhand.mobile.data.KeystoreSecureStore
 import pro.dockhand.mobile.ui.DockhandApp
 import pro.dockhand.mobile.ui.theme.DockhandTheme
+
+private val Context.dockhandPreferences: DataStore<Preferences> by preferencesDataStore("dockhand_preferences")
+private val Context.dockhandSecure: DataStore<Preferences> by preferencesDataStore("dockhand_secure")
 
 class MainActivity : ComponentActivity() {
 
@@ -28,12 +26,9 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        val preferenceStore = createDataStore(this, "dockhand_preferences")
-        val secureStore = createDataStore(this, "dockhand_secure")
-
         appViewModel = AppViewModel(
-            preferences = DataStorePreferencesRepository(preferenceStore),
-            secureStore = KeystoreSecureStore(secureStore),
+            preferences = DataStorePreferencesRepository(applicationContext.dockhandPreferences),
+            secureStore = KeystoreSecureStore(applicationContext.dockhandSecure),
             scope = lifecycleScope
         )
 
@@ -43,11 +38,4 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
-
-    private fun createDataStore(context: Context, name: String): DataStore<Preferences> =
-        PreferenceDataStoreFactory.create(
-            scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
-        ) {
-            File(context.filesDir, "$name.preferences_pb")
-        }
 }

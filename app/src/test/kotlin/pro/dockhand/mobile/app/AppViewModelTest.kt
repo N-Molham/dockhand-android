@@ -88,7 +88,6 @@ class AppViewModelTest {
         enqueueEnvironmentResponse()
         val viewModel = createViewModel(this)
 
-        viewModel.bootstrap()
         waitUntilCondition { viewModel.state.value.environments.size == 2 }
 
         val state = viewModel.state.value
@@ -155,7 +154,6 @@ class AppViewModelTest {
         seedProfile()
         enqueueEnvironmentResponse()
         val viewModel = createViewModel(this)
-        viewModel.bootstrap()
         waitUntilCondition { viewModel.state.value.environments.size == 2 }
 
         viewModel.selectEnvironment(1)
@@ -169,7 +167,6 @@ class AppViewModelTest {
         server.enqueue(MockResponse.Builder().code(500).body("""{"error":"boom"}""").build())
         val viewModel = createViewModel(this)
 
-        viewModel.bootstrap()
         waitUntilCondition { viewModel.state.value.environmentError != null }
 
         val error = viewModel.state.value.environmentError.orEmpty()
@@ -183,7 +180,6 @@ class AppViewModelTest {
         seedProfile(baseUrl = "example.com:3000")
         val viewModel = createViewModel(this)
 
-        viewModel.bootstrap()
         waitUntilCondition { viewModel.state.value.environmentError != null }
 
         assertEquals("Invalid Dockhand URL", viewModel.state.value.environmentError)
@@ -217,7 +213,6 @@ class AppViewModelTest {
         secureStore.writeCustomHeaders("profile-1", mapOf("X-Gateway" to "abc"))
         enqueueEnvironmentResponse()
         val viewModel = createViewModel(this)
-        viewModel.bootstrap()
         waitUntilCondition { viewModel.state.value.environments.isNotEmpty() }
 
         assertNotNull(viewModel.service())

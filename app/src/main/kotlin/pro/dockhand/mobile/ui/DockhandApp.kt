@@ -43,10 +43,6 @@ fun DockhandApp(viewModel: AppViewModel) {
     var selectedTab by remember { mutableStateOf(AppTab.DASHBOARD) }
     var showSettings by remember { mutableStateOf(false) }
 
-    LaunchedEffect(Unit) {
-        viewModel.bootstrap()
-    }
-
     BackHandler(enabled = showSettings) {
         showSettings = false
     }
