@@ -1,5 +1,6 @@
 package pro.dockhand.mobile.ui.screens
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -73,6 +74,14 @@ fun ContainersScreen(viewModel: AppViewModel, modifier: Modifier = Modifier) {
     var shellContainer by remember { mutableStateOf<Container?>(null) }
     var selectedFilter by remember { mutableStateOf<ContainerListFilter>(ContainerListFilter.All) }
     var pendingAction by remember { mutableStateOf<PendingContainerAction?>(null) }
+
+    BackHandler(enabled = shellContainer != null || selectedContainer != null) {
+        if (shellContainer != null) {
+            shellContainer = null
+        } else {
+            selectedContainer = null
+        }
+    }
 
     val openShell = shellContainer
     if (openShell != null) {
