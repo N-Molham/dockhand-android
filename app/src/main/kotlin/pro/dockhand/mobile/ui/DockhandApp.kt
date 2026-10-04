@@ -3,6 +3,7 @@ package pro.dockhand.mobile.ui
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
@@ -15,7 +16,6 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -23,6 +23,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalDensity
 import pro.dockhand.mobile.app.AppViewModel
 import pro.dockhand.mobile.ui.screens.ContainersScreen
 import pro.dockhand.mobile.ui.screens.DashboardScreen
@@ -42,6 +43,7 @@ fun DockhandApp(viewModel: AppViewModel) {
     val state by viewModel.state.collectAsState()
     var selectedTab by remember { mutableStateOf(AppTab.DASHBOARD) }
     var showSettings by remember { mutableStateOf(false) }
+    val imeVisible = WindowInsets.ime.getBottom(LocalDensity.current) > 0
 
     BackHandler(enabled = showSettings) {
         showSettings = false
@@ -67,7 +69,7 @@ fun DockhandApp(viewModel: AppViewModel) {
             )
         },
         bottomBar = {
-            if (!showSettings) {
+            if (!showSettings && !imeVisible) {
                 NavigationBar {
                     AppTab.entries.forEach { tab ->
                         NavigationBarItem(
