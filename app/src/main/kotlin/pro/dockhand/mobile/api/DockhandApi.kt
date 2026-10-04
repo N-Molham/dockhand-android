@@ -22,6 +22,8 @@ interface DockhandApi {
     suspend fun fetchStackEditorDocument(name: String, environmentID: Int): StackEditorDocument
     suspend fun fetchContainerLogs(containerID: String, environmentID: Int, tail: Int = 200): ContainerLogsDocument
     suspend fun fetchContainerShells(containerID: String, environmentID: Int): ContainerShellDetectionResult
+    suspend fun fetchContainerInspect(containerID: String, environmentID: Int): ContainerInspect =
+        throw DockhandServiceError.InvalidResponse
     fun streamContainerLogs(containerID: String, environmentID: Int, tail: Int = 200): Flow<ContainerLogEvent>
     fun makeContainerShellRequest(containerID: String, environmentID: Int, shell: String, user: String): Request
     suspend fun startImagePull(imageName: String, environmentID: Int, tag: String? = null): ImagePullStartResult

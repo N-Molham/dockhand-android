@@ -71,14 +71,17 @@ fun ContainersScreen(viewModel: AppViewModel, modifier: Modifier = Modifier) {
     val snackbarHostState = remember { SnackbarHostState() }
     var selectedContainer by remember { mutableStateOf<Container?>(null) }
     var shellContainer by remember { mutableStateOf<Container?>(null) }
+    var detailContainer by remember { mutableStateOf<Container?>(null) }
     var selectedFilter by remember { mutableStateOf<ContainerListFilter>(ContainerListFilter.All) }
     var pendingAction by remember { mutableStateOf<PendingContainerAction?>(null) }
 
-    BackHandler(enabled = shellContainer != null || selectedContainer != null) {
-        if (shellContainer != null) {
-            shellContainer = null
-        } else {
-            selectedContainer = null
+    BackHandler(
+        enabled = shellContainer != null || selectedContainer != null || detailContainer != null
+    ) {
+        when {
+            detailContainer != null -> detailContainer = null
+            shellContainer != null -> shellContainer = null
+            else -> selectedContainer = null
         }
     }
 
@@ -99,6 +102,21 @@ fun ContainersScreen(viewModel: AppViewModel, modifier: Modifier = Modifier) {
             viewModel = viewModel,
             container = openContainer,
             onBack = { selectedContainer = null },
+            modifier = modifier
+        )
+        return
+    }
+
+    val openDetail = detailContainer
+    if (openDetail != null) {
+        ContainerDetailScreen(
+            viewModel = viewModel,
+            container = openDetail,
+            onBack = { detailContainer = null },
+            onOpenShell = {
+                detailContainer = null
+                shellContainer = openDetail
+            },
             modifier = modifier
         )
         return
@@ -191,6 +209,7 @@ fun ContainersScreen(viewModel: AppViewModel, modifier: Modifier = Modifier) {
                                         actionsEnabled = store.activeActionID == null,
                                         showProgress = store.isRunningFor(item.id),
                                         onOpen = { selectedContainer = item },
+                                        onOpenDetail = { detailContainer = item },
                                         onOpenShell = { shellContainer = item },
                                         onAction = { action ->
                                             if (action == ContainerAction.STOP || action == ContainerAction.RESTART) {
@@ -249,6 +268,7 @@ private fun ContainerRow(
     actionsEnabled: Boolean,
     showProgress: Boolean,
     onOpen: () -> Unit,
+    onOpenDetail: () -> Unit,
     onOpenShell: () -> Unit,
     onAction: (ContainerAction) -> Unit
 ) {
@@ -335,6 +355,14 @@ private fun ContainerRow(
                     }
                 }
                 DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
+                    DropdownMenuItem(
+                        text = { Text("Details") },
+                        enabled = actionsEnabled,
+                        onClick = {
+                            menuExpanded = false
+                            onOpenDetail()
+                        }
+                    )
                     if (container.canOpenShell) {
                         DropdownMenuItem(
                             text = { Text("Open shell") },

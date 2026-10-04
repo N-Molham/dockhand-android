@@ -71,7 +71,15 @@ data class Container(
     val ports: List<ContainerPort> = emptyList(),
     val networks: Map<String, NetworkInfo> = emptyMap(),
     val mounts: List<MountInfo> = emptyList(),
-    val labels: Map<String, String> = emptyMap()
+    val labels: Map<String, String> = emptyMap(),
+    val cpuPercent: Double? = null,
+    val memoryUsed: Long? = null,
+    val memoryLimit: Long? = null,
+    val networkRx: Long? = null,
+    val networkTx: Long? = null,
+    val diskRead: Long? = null,
+    val diskWrite: Long? = null,
+    val pids: Int? = null
 )
 
 @Serializable

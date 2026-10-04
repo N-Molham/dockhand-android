@@ -1,6 +1,9 @@
+@file:OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
+
 package pro.dockhand.mobile.api
 
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonNames
 
 @Serializable
 data class StackEditorDocument(
@@ -328,3 +331,95 @@ data class ImageScanDocument(
     var progress: Int? = null,
     var results: List<String> = emptyList()
 )
+
+@Serializable
+data class ContainerInspect(
+    @JsonNames("Id") val id: String = "",
+    @JsonNames("Name") val name: String = "",
+    @JsonNames("Image") val image: String = "",
+    @JsonNames("Created") val created: String? = null,
+    @JsonNames("Platform") val platform: String? = null,
+    @JsonNames("RestartCount") val restartCount: Int? = null,
+    @JsonNames("State") val state: State? = null,
+    @JsonNames("Config") val config: Config? = null,
+    @JsonNames("HostConfig") val hostConfig: HostConfig? = null,
+    @JsonNames("Mounts") val mounts: List<Mount> = emptyList(),
+    @JsonNames("NetworkSettings") val networkSettings: NetworkSettings? = null,
+    @JsonNames("Ports") val ports: Map<String, List<PortBinding>?>? = null
+) {
+    @Serializable
+    data class State(
+        @JsonNames("Status") val status: String? = null,
+        @JsonNames("Running") val running: Boolean? = null,
+        @JsonNames("Paused") val paused: Boolean? = null,
+        @JsonNames("Restarting") val restarting: Boolean? = null,
+        @JsonNames("Pid") val pid: Int? = null,
+        @JsonNames("ExitCode") val exitCode: Int? = null,
+        @JsonNames("StartedAt") val startedAt: String? = null,
+        @JsonNames("FinishedAt") val finishedAt: String? = null,
+        @JsonNames("Health") val health: Health? = null
+    )
+
+    @Serializable
+    data class Health(
+        @JsonNames("Status") val status: String? = null
+    )
+
+    @Serializable
+    data class Config(
+        @JsonNames("Image") val image: String? = null,
+        @JsonNames("Hostname") val hostname: String? = null,
+        @JsonNames("User") val user: String? = null,
+        @JsonNames("WorkingDir") val workingDir: String? = null,
+        @JsonNames("Entrypoint") val entrypoint: List<String>? = null,
+        @JsonNames("Cmd") val cmd: List<String>? = null,
+        @JsonNames("Env") val env: List<String>? = null,
+        @JsonNames("Labels") val labels: Map<String, String> = emptyMap()
+    )
+
+    @Serializable
+    data class HostConfig(
+        @JsonNames("Binds") val binds: List<String>? = null,
+        @JsonNames("NetworkMode") val networkMode: String? = null,
+        @JsonNames("RestartPolicy") val restartPolicy: RestartPolicy? = null,
+        @JsonNames("Privileged") val privileged: Boolean? = null,
+        @JsonNames("Memory") val memory: Long? = null,
+        @JsonNames("NanoCpus") val nanoCpus: Long? = null
+    )
+
+    @Serializable
+    data class RestartPolicy(
+        @JsonNames("Name") val name: String? = null
+    )
+
+    @Serializable
+    data class Mount(
+        @JsonNames("Type") val type: String? = null,
+        @JsonNames("Source") val source: String? = null,
+        @JsonNames("Destination") val destination: String? = null,
+        @JsonNames("Mode") val mode: String? = null,
+        @JsonNames("RW") val rw: Boolean? = null
+    )
+
+    @Serializable
+    data class NetworkSettings(
+        @JsonNames("IPAddress") val ipAddress: String? = null,
+        @JsonNames("Networks") val networks: Map<String, Network> = emptyMap(),
+        @JsonNames("Ports") val ports: Map<String, List<PortBinding>?>? = null
+    )
+
+    @Serializable
+    data class Network(
+        @JsonNames("IPAddress") val ipAddress: String? = null,
+        @JsonNames("Gateway") val gateway: String? = null,
+        @JsonNames("MacAddress") val macAddress: String? = null,
+        @JsonNames("Aliases") val aliases: List<String>? = null,
+        @JsonNames("NetworkID") val networkId: String? = null
+    )
+
+    @Serializable
+    data class PortBinding(
+        @JsonNames("HostIp") val hostIp: String? = null,
+        @JsonNames("HostPort") val hostPort: String? = null
+    )
+}

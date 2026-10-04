@@ -222,6 +222,16 @@ class DockhandService(
         )
     }
 
+    override suspend fun fetchContainerInspect(
+        containerID: String,
+        environmentID: Int
+    ): ContainerInspect {
+        val request = jsonRequest("api/containers/$containerID/inspect", "GET", environmentID)
+        val (status, text) = executeText(request)
+        validateResponse(status, text)
+        return dockhandJson.decodeFromString(text)
+    }
+
     override fun makeContainerShellRequest(
         containerID: String,
         environmentID: Int,
