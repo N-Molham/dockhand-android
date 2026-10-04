@@ -13,6 +13,14 @@ if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(FileInputStream(keystorePropertiesFile))
 }
 
+val versionProperties = Properties()
+val versionPropertiesFile = rootProject.file("version.properties")
+if (versionPropertiesFile.exists()) {
+    versionProperties.load(FileInputStream(versionPropertiesFile))
+}
+val appVersionCode = versionProperties.getProperty("versionCode")?.toIntOrNull() ?: 1
+val appVersionName = versionProperties.getProperty("versionName") ?: "0.0.0"
+
 fun signingValue(envName: String, propertyName: String): String? =
     System.getenv(envName)?.takeIf { it.isNotBlank() }
         ?: keystoreProperties.getProperty(propertyName)?.takeIf { it.isNotBlank() }
@@ -31,8 +39,8 @@ android {
         applicationId = "pro.dockhand.mobile"
         minSdk = 26
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = appVersionCode
+        versionName = appVersionName
     }
 
     signingConfigs {
@@ -67,6 +75,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 
     packaging {

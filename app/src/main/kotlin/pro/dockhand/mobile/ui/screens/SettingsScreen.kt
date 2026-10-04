@@ -144,6 +144,12 @@ fun SettingsScreen(viewModel: AppViewModel, onClose: () -> Unit, modifier: Modif
             }
         }
 
+        Text(
+            text = "Dockhand Android v${pro.dockhand.mobile.BuildConfig.VERSION_NAME} (${pro.dockhand.mobile.BuildConfig.VERSION_CODE})",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+
         ActiveServerCard(
             state = state,
             onRefresh = {

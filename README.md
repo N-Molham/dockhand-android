@@ -18,6 +18,17 @@ Unofficial Android client for self-hosted [Dockhand](https://github.com/Finsys/d
 - Stacks: list, detail, start/stop/restart/down/redeploy, compose and .env editing with validation.
 - Images: list, inspect, pull, tag, delete, prune and scan.
 
+## Versioning
+
+App version lives in `version.properties` (`versionCode`, `versionName`) and is the single source of truth for Gradle, the Settings screen and CI artifact names.
+
+Policy: every change that lands on `main` updates it before commit.
+
+- `feat:` → bump `versionName` minor (0.1.0 → 0.2.0)
+- `fix:`, `perf:`, `refactor:` → bump `versionName` patch (0.1.0 → 0.1.1)
+- breaking change → bump major, reset minor/patch
+- every bump also increments `versionCode` by 1 (must always increase)
+
 ## Requirements
 
 - JDK 17
