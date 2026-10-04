@@ -3,10 +3,14 @@ name: Android Build
 on:
   workflow_dispatch:
     inputs:
-      run_release_build:
-        description: "Also build R8-minified release APK"
-        type: boolean
-        default: false
+      build_type:
+        description: "APK to build"
+        type: choice
+        options:
+          - debug
+          - release
+          - both
+        default: debug
 
 permissions:
   contents: read
@@ -39,7 +43,7 @@ jobs:
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Decode release keystore
-        if: ${{ inputs.run_release_build }}
+        if: ${{ inputs.build_type != 'debug' }}
         env:
           KEYSTORE_BASE64: ${{ secrets.DOCKHAND_KEYSTORE_BASE64 }}
         run: |
@@ -56,20 +60,24 @@ jobs:
           DOCKHAND_KEY_ALIAS: ${{ secrets.DOCKHAND_KEY_ALIAS }}
           DOCKHAND_KEY_PASSWORD: ${{ secrets.DOCKHAND_KEY_PASSWORD }}
         run: |
-          TASKS="testDebugUnitTest lintDebug assembleDebug"
-          if [ "${{ inputs.run_release_build }}" = "true" ]; then
+          TASKS="testDebugUnitTest lintDebug"
+          if [ "${{ inputs.build_type }}" != "release" ]; then
+            TASKS="$TASKS assembleDebug"
+          fi
+          if [ "${{ inputs.build_type }}" != "debug" ]; then
             TASKS="$TASKS assembleRelease"
           fi
           ./gradlew $TASKS
 
       - name: Upload debug APK
+        if: ${{ inputs.build_type != 'release' }}
         uses: actions/upload-artifact@v7
         with:
           name: dockhand-android-debug-v${{ steps.app_version.outputs.version }}
           path: app/build/outputs/apk/debug/app-debug.apk
 
       - name: Upload signed release APK
-        if: ${{ inputs.run_release_build }}
+        if: ${{ inputs.build_type != 'debug' }}
         uses: actions/upload-artifact@v7
         with:
           name: dockhand-android-release-v${{ steps.app_version.outputs.version }}
