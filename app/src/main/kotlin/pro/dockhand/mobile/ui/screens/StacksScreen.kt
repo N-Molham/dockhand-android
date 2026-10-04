@@ -1,5 +1,6 @@
 package pro.dockhand.mobile.ui.screens
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -11,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -20,6 +22,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
@@ -54,6 +57,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -450,6 +454,8 @@ fun StacksScreen(viewModel: AppViewModel, modifier: Modifier = Modifier) {
     val store = remember { StacksScreenStore() }
     val environmentId = environment?.id
     var selectedStackName by remember { mutableStateOf<String?>(null) }
+    var editorOpen by remember { mutableStateOf(false) }
+    val coroutineScope = rememberCoroutineScope()
 
     LaunchedEffect(appState.selectedProfileId, environmentId, appState.dashboardRefreshRevision) {
         store.load(viewModel, environmentId)
@@ -469,19 +475,63 @@ fun StacksScreen(viewModel: AppViewModel, modifier: Modifier = Modifier) {
     }
 
     val selectedStack = selectedStackName?.let { name -> store.stackNamed(name) }
+    val scope = remember(selectedStackName) { viewModel.connectionScope }
+    val isCurrentScope = viewModel.isCurrentScope(scope)
+
+    LaunchedEffect(selectedStackName, scope) {
+        val name = selectedStackName ?: return@LaunchedEffect
+        store.loadDocument(viewModel, name, environmentId)
+    }
+
+    BackHandler(enabled = selectedStack != null) {
+        if (editorOpen) {
+            editorOpen = false
+        } else {
+            selectedStackName = null
+        }
+    }
+
     if (selectedStack != null) {
-        StackDetail(
-            viewModel = viewModel,
-            store = store,
-            stack = selectedStack,
-            environmentId = environmentId,
-            onBack = { selectedStackName = null }
-        )
+        if (editorOpen) {
+            StackEditor(
+                store = store,
+                stackName = selectedStack.name,
+                isCurrentScope = isCurrentScope,
+                onBack = { editorOpen = false },
+                onSave = { pane, compose, env ->
+                    coroutineScope.launch {
+                        if (pane == 0) {
+                            store.saveCompose(compose, selectedStack.name, viewModel, environmentId)
+                        } else {
+                            store.saveEnv(env, selectedStack.name, viewModel, environmentId)
+                        }
+                    }
+                },
+                modifier = modifier
+            )
+        } else {
+            StackDetail(
+                viewModel = viewModel,
+                store = store,
+                stack = selectedStack,
+                environmentId = environmentId,
+                isCurrentScope = isCurrentScope,
+                onBack = {
+                    editorOpen = false
+                    selectedStackName = null
+                },
+                onEdit = { editorOpen = true },
+                modifier = modifier
+            )
+        }
     } else {
         StackList(
             store = store,
             selectedName = null,
-            onSelect = { selectedStackName = it },
+            onSelect = {
+                editorOpen = false
+                selectedStackName = it
+            },
             modifier = modifier
         )
     }
@@ -607,15 +657,13 @@ private fun StackDetail(
     store: StacksScreenStore,
     stack: StackSummary,
     environmentId: Int?,
-    onBack: () -> Unit
+    isCurrentScope: Boolean,
+    onBack: () -> Unit,
+    onEdit: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     val coroutineScope = rememberCoroutineScope()
-    val scope = remember { viewModel.connectionScope }
-    val isCurrentScope = viewModel.isCurrentScope(scope)
 
-    var composeText by remember { mutableStateOf("") }
-    var envText by remember { mutableStateOf("") }
-    var activePane by remember { mutableIntStateOf(0) }
     var showDownConfirmation by remember { mutableStateOf(false) }
     var showDeleteConfirmation by remember { mutableStateOf(false) }
     var showRedeployDialog by remember { mutableStateOf(false) }
@@ -623,19 +671,8 @@ private fun StackDetail(
     var buildOption by remember { mutableStateOf(false) }
     var forceRecreateOption by remember { mutableStateOf(false) }
 
-    LaunchedEffect(stack.name, scope) {
-        store.loadDocument(viewModel, stack.name, environmentId)
-    }
-    LaunchedEffect(store.document) {
-        val loadedDocument = store.document
-        if (loadedDocument != null) {
-            composeText = loadedDocument.composeContent
-            envText = loadedDocument.envContent
-        }
-    }
-
     Column(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
             .padding(16.dp),
@@ -653,6 +690,9 @@ private fun StackDetail(
                     overflow = TextOverflow.Ellipsis
                 )
                 StackSecondaryText(stack.localizedStatusText)
+            }
+            IconButton(onClick = onEdit) {
+                Icon(Icons.Default.Edit, contentDescription = "Edit compose and .env")
             }
         }
 
@@ -694,27 +734,6 @@ private fun StackDetail(
             stack = stack,
             environmentId = environmentId,
             isCurrentScope = isCurrentScope
-        )
-
-        StackEditorCard(
-            store = store,
-            stackName = stack.name,
-            isCurrentScope = isCurrentScope,
-            activePane = activePane,
-            composeText = composeText,
-            envText = envText,
-            onSelectPane = { activePane = it },
-            onComposeChange = { composeText = it },
-            onEnvChange = { envText = it },
-            onSave = {
-                coroutineScope.launch {
-                    if (activePane == 0) {
-                        store.saveCompose(composeText, stack.name, viewModel, environmentId)
-                    } else {
-                        store.saveEnv(envText, stack.name, viewModel, environmentId)
-                    }
-                }
-            }
         )
     }
 
@@ -1064,89 +1083,121 @@ private fun ContainerActionButton(
 }
 
 @Composable
-private fun StackEditorCard(
+private fun StackEditor(
     store: StacksScreenStore,
     stackName: String,
     isCurrentScope: Boolean,
-    activePane: Int,
-    composeText: String,
-    envText: String,
-    onSelectPane: (Int) -> Unit,
-    onComposeChange: (String) -> Unit,
-    onEnvChange: (String) -> Unit,
-    onSave: () -> Unit
+    onBack: () -> Unit,
+    onSave: (pane: Int, compose: String, env: String) -> Unit,
+    modifier: Modifier = Modifier
 ) {
-    Card(Modifier.fillMaxWidth()) {
-        Column(
-            modifier = Modifier.fillMaxWidth().padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                FilterChip(
-                    selected = activePane == 0,
-                    onClick = { onSelectPane(0) },
-                    label = { Text("Compose") }
-                )
-                Spacer(Modifier.width(8.dp))
-                FilterChip(
-                    selected = activePane == 1,
-                    onClick = { onSelectPane(1) },
-                    label = { Text(".env") }
-                )
-                Spacer(Modifier.weight(1f))
-                Button(
-                    onClick = onSave,
-                    enabled = isCurrentScope && !store.isSaving && !store.isLoadingDocument
-                ) {
-                    if (store.isSaving) {
-                        CircularProgressIndicator(Modifier.size(16.dp))
-                    } else {
-                        Text("Save")
-                    }
+    var composeText by remember { mutableStateOf("") }
+    var envText by remember { mutableStateOf("") }
+    var activePane by remember { mutableIntStateOf(0) }
+
+    LaunchedEffect(store.document) {
+        val loadedDocument = store.document ?: return@LaunchedEffect
+        composeText = loadedDocument.composeContent
+        envText = loadedDocument.envContent
+    }
+
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .imePadding()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = onBack) {
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+            }
+            Text(
+                text = stackName,
+                style = MaterialTheme.typography.titleLarge,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f)
+            )
+            Button(
+                onClick = { onSave(activePane, composeText, envText) },
+                enabled = isCurrentScope && !store.isSaving && !store.isLoadingDocument
+            ) {
+                if (store.isSaving) {
+                    CircularProgressIndicator(Modifier.size(16.dp))
+                } else {
+                    Text("Save")
                 }
             }
+        }
 
-            if (store.document?.needsFileLocation == true) {
-                Text(
-                    text = store.document?.composeError ?: "Dockhand needs the compose file location for this stack.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.error
-                )
-            }
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            FilterChip(
+                selected = activePane == 0,
+                onClick = { activePane = 0 },
+                label = { Text("Compose") }
+            )
+            FilterChip(
+                selected = activePane == 1,
+                onClick = { activePane = 1 },
+                label = { Text(".env") }
+            )
+        }
 
-            store.saveMessage?.let { message ->
-                Text(
-                    text = message,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = if (store.saveMessageIsError) {
-                        MaterialTheme.colorScheme.error
-                    } else {
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                    }
-                )
-            }
+        if (store.document?.needsFileLocation == true) {
+            Text(
+                text = store.document?.composeError ?: "Dockhand needs the compose file location for this stack.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error
+            )
+        }
 
-            if (activePane == 0) {
-                OutlinedTextField(
-                    value = composeText,
-                    onValueChange = onComposeChange,
-                    modifier = Modifier.fillMaxWidth().heightIn(min = 280.dp),
-                    label = { Text("Compose file") },
-                    textStyle = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace)
-                )
-            } else {
-                OutlinedTextField(
-                    value = envText,
-                    onValueChange = onEnvChange,
-                    modifier = Modifier.fillMaxWidth().heightIn(min = 280.dp),
-                    label = { Text("Environment file") },
-                    textStyle = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace)
-                )
-            }
+        store.saveMessage?.let { message ->
+            Text(
+                text = message,
+                style = MaterialTheme.typography.bodySmall,
+                color = if (store.saveMessageIsError) {
+                    MaterialTheme.colorScheme.error
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                }
+            )
+        }
 
-            if (store.isLoadingDocument) {
+        if (store.isLoadingDocument) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
                 CircularProgressIndicator(Modifier.size(18.dp))
+                StackSecondaryText("Loading stack files…")
             }
+        }
+
+        val editorModifier = Modifier.fillMaxWidth().weight(1f)
+        val editorTextStyle = MaterialTheme.typography.bodySmall.copy(
+            fontFamily = FontFamily.Monospace,
+            fontSize = 13.sp
+        )
+        if (activePane == 0) {
+            OutlinedTextField(
+                value = composeText,
+                onValueChange = { composeText = it },
+                modifier = editorModifier,
+                label = { Text("Compose file") },
+                textStyle = editorTextStyle
+            )
+        } else {
+            OutlinedTextField(
+                value = envText,
+                onValueChange = { envText = it },
+                modifier = editorModifier,
+                label = { Text("Environment file") },
+                textStyle = editorTextStyle
+            )
         }
     }
 }

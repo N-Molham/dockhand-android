@@ -1,5 +1,6 @@
 package pro.dockhand.mobile.ui
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -43,6 +44,13 @@ fun DockhandApp(viewModel: AppViewModel) {
 
     LaunchedEffect(Unit) {
         viewModel.bootstrap()
+    }
+
+    BackHandler(enabled = showSettings) {
+        showSettings = false
+    }
+    BackHandler(enabled = !showSettings && selectedTab != AppTab.DASHBOARD) {
+        selectedTab = AppTab.DASHBOARD
     }
 
     Scaffold(

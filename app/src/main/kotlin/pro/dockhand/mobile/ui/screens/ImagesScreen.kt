@@ -1,5 +1,6 @@
 package pro.dockhand.mobile.ui.screens
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -429,6 +430,9 @@ fun ImagesScreen(viewModel: AppViewModel, modifier: Modifier = Modifier) {
     }
 
     val selectedImage = selectedImageId?.let { store.imageOrNull(it) }
+    BackHandler(enabled = selectedImage != null) {
+        selectedImageId = null
+    }
     if (selectedImage != null) {
         ImageDetail(
             viewModel = viewModel,
@@ -436,7 +440,8 @@ fun ImagesScreen(viewModel: AppViewModel, modifier: Modifier = Modifier) {
             image = selectedImage,
             environmentId = environmentId,
             onBack = { selectedImageId = null },
-            onPullRequested = { target -> pullTarget = target }
+            onPullRequested = { target -> pullTarget = target },
+            modifier = modifier
         )
     } else {
         ImageList(
@@ -628,7 +633,8 @@ private fun ImageDetail(
     image: ImageSummary,
     environmentId: Int?,
     onBack: () -> Unit,
-    onPullRequested: (ImagePullTarget) -> Unit
+    onPullRequested: (ImagePullTarget) -> Unit,
+    modifier: Modifier = Modifier
 ) {
     val coroutineScope = rememberCoroutineScope()
     val scope = remember { viewModel.connectionScope }
@@ -645,7 +651,7 @@ private fun ImageDetail(
     val liveImage = store.imageOrNull(image.id) ?: image
 
     Column(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
             .padding(16.dp),
