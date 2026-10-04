@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -1225,16 +1224,17 @@ private fun StackEditor(
                 )
                 .padding(vertical = 10.dp)
         ) {
-            Row(modifier = Modifier.fillMaxSize()) {
+            Row(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(verticalScrollState)
+            ) {
                 LineNumberGutter(
                     lineCount = lineCount,
-                    scrollState = verticalScrollState,
                     textStyle = editorTextStyle,
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                     modifier = Modifier
                         .width(gutterWidth)
-                        .fillMaxHeight()
-                        .verticalScroll(verticalScrollState)
                         .padding(start = 4.dp, end = 8.dp)
                 )
                 BasicTextField(
@@ -1244,9 +1244,7 @@ private fun StackEditor(
                     },
                     modifier = Modifier
                         .weight(1f)
-                        .fillMaxHeight()
                         .horizontalScroll(horizontalScrollState)
-                        .verticalScroll(verticalScrollState)
                         .padding(start = 4.dp, end = 8.dp),
                     textStyle = editorTextStyle,
                     visualTransformation = highlightTransformation

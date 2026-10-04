@@ -1,9 +1,7 @@
 package pro.dockhand.mobile.ui
 
-import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -254,13 +252,12 @@ fun codeHighlightTransformation(
 @Composable
 fun LineNumberGutter(
     lineCount: Int,
-    scrollState: ScrollState,
     textStyle: TextStyle,
     color: Color,
     modifier: Modifier = Modifier
 ) {
     val digits = lineCount.toString().length
-    Column(modifier = modifier.verticalScroll(scrollState)) {
+    Column(modifier = modifier) {
         repeat(lineCount) { index ->
             Text(
                 text = (index + 1).toString().padStart(digits),
