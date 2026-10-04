@@ -795,7 +795,20 @@ private fun PendingUpdatesCard(
                     modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
                     verticalArrangement = Arrangement.spacedBy(2.dp)
                 ) {
-                    Text(update.containerName, style = MaterialTheme.typography.titleSmall)
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            text = update.containerName,
+                            style = MaterialTheme.typography.titleSmall,
+                            modifier = Modifier.weight(1f)
+                        )
+                        if (store.isUpdatingContainers) {
+                            CircularProgressIndicator(Modifier.size(14.dp))
+                            SecondaryText("Updating")
+                        }
+                    }
                     Text(
                         text = update.currentImage,
                         style = MaterialTheme.typography.bodySmall,
