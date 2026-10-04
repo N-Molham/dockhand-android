@@ -1,6 +1,7 @@
 package pro.dockhand.mobile.ui.screens
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -41,7 +42,9 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import java.util.Locale
@@ -54,6 +57,7 @@ import pro.dockhand.mobile.api.isDockhandCancellation
 import pro.dockhand.mobile.app.AppViewModel
 import pro.dockhand.mobile.ui.ContainerAction
 import pro.dockhand.mobile.ui.ContainerListFilter
+import pro.dockhand.mobile.ui.TraefikUrlResolver
 import pro.dockhand.mobile.ui.canOpenShell
 import pro.dockhand.mobile.ui.canPerform
 import pro.dockhand.mobile.ui.localizedDockhandStateLabel
@@ -341,6 +345,24 @@ private fun ContainerRow(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
+                val linkUrls = remember(container.labels) {
+                    TraefikUrlResolver.resolveUrls(container.labels)
+                }
+                if (linkUrls.isNotEmpty()) {
+                    val uriHandler = LocalUriHandler.current
+                    linkUrls.forEach { url ->
+                        Text(
+                            text = url,
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                textDecoration = TextDecoration.Underline
+                            ),
+                            color = MaterialTheme.colorScheme.primary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.clickable { uriHandler.openUri(url) }
+                        )
+                    }
+                }
             }
             Box {
                 if (showProgress) {
