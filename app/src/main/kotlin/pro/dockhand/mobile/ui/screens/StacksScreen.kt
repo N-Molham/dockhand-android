@@ -59,8 +59,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import pro.dockhand.mobile.api.DockhandApi
 import pro.dockhand.mobile.api.DockhandServiceError
 import pro.dockhand.mobile.api.StackAction
@@ -74,13 +76,18 @@ import pro.dockhand.mobile.api.UpdateRawEnvRequest
 import pro.dockhand.mobile.api.UpdateStackComposeRequest
 import pro.dockhand.mobile.api.dockhandUserFacingMessage
 import pro.dockhand.mobile.app.AppViewModel
+import pro.dockhand.mobile.ui.CodeHighlightCache
 import pro.dockhand.mobile.ui.ContainerAction
+import pro.dockhand.mobile.ui.EnvLineHighlighter
+import pro.dockhand.mobile.ui.YamlLineHighlighter
 import pro.dockhand.mobile.ui.canPerform
+import pro.dockhand.mobile.ui.codeHighlightTransformation
 import pro.dockhand.mobile.ui.dockhandStateRank
 import pro.dockhand.mobile.ui.localizedDockhandStateLabel
 import pro.dockhand.mobile.ui.localizedServicesCountText
 import pro.dockhand.mobile.ui.localizedStatusText
 import pro.dockhand.mobile.ui.normalizedDockhandState
+import pro.dockhand.mobile.ui.rememberCodeHighlightColors
 import pro.dockhand.mobile.ui.servicesCount
 import pro.dockhand.mobile.ui.statusRank
 import pro.dockhand.mobile.ui.supportsRedeploy
@@ -1182,13 +1189,31 @@ private fun StackEditor(
             fontFamily = FontFamily.Monospace,
             fontSize = 13.sp
         )
+        val highlightColors = rememberCodeHighlightColors()
+        val highlightCache = remember(activePane) {
+            CodeHighlightCache(
+                if (activePane == 0) YamlLineHighlighter::spans else EnvLineHighlighter::spans
+            )
+        }
+        var highlightVersion by remember(activePane) { mutableIntStateOf(0) }
+        val visibleText = if (activePane == 0) composeText else envText
+        LaunchedEffect(visibleText, activePane) {
+            val snapshot = visibleText
+            delay(HIGHLIGHT_DEBOUNCE_MS)
+            withContext(Dispatchers.Default) { highlightCache.update(snapshot) }
+            highlightVersion++
+        }
+        val highlightTransformation = remember(highlightVersion, highlightColors, activePane) {
+            codeHighlightTransformation(highlightColors, highlightCache)
+        }
         if (activePane == 0) {
             OutlinedTextField(
                 value = composeText,
                 onValueChange = { composeText = it },
                 modifier = editorModifier,
                 label = { Text("Compose file") },
-                textStyle = editorTextStyle
+                textStyle = editorTextStyle,
+                visualTransformation = highlightTransformation
             )
         } else {
             OutlinedTextField(
@@ -1196,11 +1221,14 @@ private fun StackEditor(
                 onValueChange = { envText = it },
                 modifier = editorModifier,
                 label = { Text("Environment file") },
-                textStyle = editorTextStyle
+                textStyle = editorTextStyle,
+                visualTransformation = highlightTransformation
             )
         }
     }
 }
+
+private const val HIGHLIGHT_DEBOUNCE_MS = 80L
 
 @Composable
 private fun StackRedeployDialog(
