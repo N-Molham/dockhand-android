@@ -162,6 +162,45 @@ class AppViewModelTest {
     }
 
     @Test
+    fun updatingProfileWithoutTokenKeepsStoredToken() = runTest {
+        seedProfile()
+        secureStore.writeToken("profile-1", "keep-me")
+        val viewModel = createViewModel(this)
+        waitUntilCondition { viewModel.state.value.serverProfiles.isNotEmpty() }
+
+        viewModel.saveServerProfile(
+            profileId = "profile-1",
+            name = "Renamed",
+            baseUrlText = server.url("/").toString(),
+            tokenValue = null,
+            allowCleartext = true,
+            makeActive = false
+        )
+
+        assertEquals("keep-me", secureStore.readToken("profile-1"))
+        assertEquals("Renamed", viewModel.state.value.serverProfiles.first().name)
+    }
+
+    @Test
+    fun clearingTokenWithEmptyValueRemovesIt() = runTest {
+        seedProfile()
+        secureStore.writeToken("profile-1", "keep-me")
+        val viewModel = createViewModel(this)
+        waitUntilCondition { viewModel.state.value.serverProfiles.isNotEmpty() }
+
+        viewModel.saveServerProfile(
+            profileId = "profile-1",
+            name = "Test",
+            baseUrlText = server.url("/").toString(),
+            tokenValue = "",
+            allowCleartext = true,
+            makeActive = false
+        )
+
+        assertEquals("", secureStore.readToken("profile-1"))
+    }
+
+    @Test
     fun healthFailureSetsUserFacingError() = runTest {
         seedProfile()
         server.enqueue(MockResponse.Builder().code(500).body("""{"error":"boom"}""").build())

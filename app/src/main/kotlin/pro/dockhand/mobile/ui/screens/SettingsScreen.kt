@@ -494,6 +494,7 @@ private fun ProfileEditor(
     var name by remember(target) { mutableStateOf(profile?.name.orEmpty()) }
     var baseUrl by remember(target) { mutableStateOf(profile?.baseUrl ?: "http://") }
     var token by remember(target) { mutableStateOf("") }
+    var tokenRemovalRequested by remember(target) { mutableStateOf(false) }
     var allowCleartext by remember(target) { mutableStateOf(profile?.allowCleartext ?: false) }
     var headerDrafts by remember(target) { mutableStateOf<List<HeaderDraft>>(emptyList()) }
     var headersLoaded by remember(target) { mutableStateOf(profileId == null) }
@@ -531,7 +532,11 @@ private fun ProfileEditor(
                 profileId = profileId,
                 name = name,
                 baseUrlText = normalized,
-                tokenValue = token,
+                tokenValue = when {
+                    token.isNotBlank() -> token
+                    tokenRemovalRequested -> ""
+                    else -> null
+                },
                 allowCleartext = cleartextPossible && allowCleartext,
                 makeActive = true
             )
@@ -604,14 +609,35 @@ private fun ProfileEditor(
                 )
                 OutlinedTextField(
                     value = token,
-                    onValueChange = { token = it },
+                    onValueChange = {
+                        token = it
+                        tokenRemovalRequested = false
+                    },
                     label = { Text("Bearer token (optional)") },
                     singleLine = true,
                     visualTransformation = PasswordVisualTransformation(),
-                    supportingText = { Text("Leave empty to remove the stored token.") },
+                    supportingText = {
+                        Text(
+                            if (profileId == null) {
+                                "Optional. Leave empty for servers without authentication."
+                            } else if (tokenRemovalRequested) {
+                                "The stored token will be removed when you save."
+                            } else {
+                                "Leave blank to keep the stored token unchanged."
+                            }
+                        )
+                    },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                     modifier = Modifier.fillMaxWidth()
                 )
+                if (profileId != null && !tokenRemovalRequested) {
+                    TextButton(onClick = {
+                        token = ""
+                        tokenRemovalRequested = true
+                    }) {
+                        Text("Remove stored token")
+                    }
+                }
                 if (cleartextPossible) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(

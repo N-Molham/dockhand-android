@@ -125,7 +125,7 @@ class AppViewModel(
         profileId: String?,
         name: String,
         baseUrlText: String,
-        tokenValue: String,
+        tokenValue: String?,
         allowCleartext: Boolean = false,
         makeActive: Boolean = true
     ) {
@@ -151,7 +151,9 @@ class AppViewModel(
         val sorted = profiles.sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.name })
         _state.update { it.copy(serverProfiles = sorted) }
         preferences.saveProfiles(sorted)
-        secureStore.writeToken(targetId, tokenValue.trim())
+        if (tokenValue != null) {
+            secureStore.writeToken(targetId, tokenValue.trim())
+        }
 
         if (makeActive || _state.value.selectedProfileId == null) {
             selectServerProfile(targetId, forceEnvironmentReset = true)
@@ -319,7 +321,7 @@ class AppViewModel(
         profileId: String?,
         name: String,
         baseUrlText: String,
-        tokenValue: String,
+        tokenValue: String?,
         allowCleartext: Boolean = false,
         makeActive: Boolean = true
     ) {
