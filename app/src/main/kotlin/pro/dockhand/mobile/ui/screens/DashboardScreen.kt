@@ -55,6 +55,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import pro.dockhand.mobile.api.ContainerBatchUpdateResult
 import pro.dockhand.mobile.api.ContainerEventSnapshot
 import pro.dockhand.mobile.api.ContainerUpdateCheckOperation
 import pro.dockhand.mobile.api.ContainerUpdateCheckResult
@@ -87,6 +88,9 @@ private class DashboardScreenStore {
     var isCheckingUpdates by mutableStateOf(false)
     var isUpdatingContainers by mutableStateOf(false)
     var updateCheckProgress by mutableStateOf<Float?>(null)
+    var updateCheckChecked by mutableStateOf<Int?>(null)
+    var updateCheckTotal by mutableStateOf<Int?>(null)
+    var updateResults by mutableStateOf<List<ContainerBatchUpdateResult>>(emptyList())
     var operationMessage by mutableStateOf<String?>(null)
     var volumes by mutableStateOf<List<VolumeSnapshot>>(emptyList())
     var networks by mutableStateOf<List<NetworkSnapshot>>(emptyList())
@@ -151,6 +155,8 @@ private class DashboardScreenStore {
         if (environmentId == null) return
         isCheckingUpdates = true
         updateCheckProgress = null
+        updateCheckChecked = null
+        updateCheckTotal = null
         operationMessage = null
         error = null
         try {
@@ -159,6 +165,8 @@ private class DashboardScreenStore {
                 is ContainerUpdateCheckOperation.Completed -> operation.result
             }
             updateCheckProgress = 1f
+            updateCheckChecked = result.total
+            updateCheckTotal = result.total
             operationMessage = "${result.updatesFound} updates found after checking ${result.total} containers"
             loadUpdates(service, environmentId)
         } catch (checkError: Throwable) {
@@ -180,6 +188,8 @@ private class DashboardScreenStore {
                     val total = line.data.total
                     if (checked != null && total != null && total > 0) {
                         updateCheckProgress = (checked.toFloat() / total.toFloat()).coerceIn(0f, 1f)
+                        updateCheckChecked = checked
+                        updateCheckTotal = total
                     }
                 }
                 cursor = jobSnapshot.lines.size
@@ -205,17 +215,17 @@ private class DashboardScreenStore {
         val service = viewModel.service() ?: return
         if (environmentId == null || updates.isEmpty()) return
         isUpdatingContainers = true
+        updateResults = emptyList()
         operationMessage = null
         error = null
         try {
             val response = service.updateContainers(updates.map { it.containerID }, environmentId)
-            if (response.summary.failed > 0) {
-                val details = response.results
-                    .filter { !it.success }
-                    .joinToString("\n") { "${it.containerName}: ${it.error ?: "Update failed"}" }
-                throw DockhandServiceError.Message(details)
+            updateResults = response.results
+            operationMessage = if (response.summary.failed > 0) {
+                "${response.summary.success} updated, ${response.summary.failed} failed"
+            } else {
+                "${response.summary.success} containers updated"
             }
-            operationMessage = "${response.summary.success} containers updated"
             loadUpdates(service, environmentId)
         } catch (updateError: Throwable) {
             if (updateError is CancellationException) throw updateError
@@ -776,6 +786,11 @@ private fun PendingUpdatesCard(
                 } else {
                     LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
                 }
+                val checked = store.updateCheckChecked
+                val total = store.updateCheckTotal
+                if (checked != null && total != null) {
+                    SecondaryText("$checked / $total containers checked")
+                }
             }
             if (store.isUpdatingContainers) {
                 Row(
@@ -787,6 +802,43 @@ private fun PendingUpdatesCard(
                 }
             }
             store.operationMessage?.let { message -> SecondaryText(message) }
+            if (store.updateResults.isNotEmpty()) {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    store.updateResults.forEach { result ->
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(
+                                imageVector = if (result.success) Icons.Default.CheckCircle else Icons.Default.Warning,
+                                contentDescription = null,
+                                tint = if (result.success) {
+                                    MaterialTheme.colorScheme.primary
+                                } else {
+                                    MaterialTheme.colorScheme.error
+                                },
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Text(
+                                text = result.containerName,
+                                style = MaterialTheme.typography.bodySmall,
+                                modifier = Modifier.weight(1f),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            if (!result.success) {
+                                Text(
+                                    text = result.error ?: "Update failed",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.error,
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
+                    }
+                }
+            }
             if (store.pendingUpdates.isEmpty() && !store.isCheckingUpdates) {
                 SecondaryText("No pending updates")
             }
