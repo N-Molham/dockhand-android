@@ -95,4 +95,29 @@ class CodeHighlightingTest {
         cache.update("services:\n  image: nginx:latest\n  image: nginx:latest")
         assertTrue(cache.spansFor("  image: nginx:latest").isNotEmpty())
     }
+
+    @Test
+    fun transformationAddsLineNumbersAndMapsOffsets() {
+        val cache = CodeHighlightCache(YamlLineHighlighter::spans)
+        val colors = CodeHighlightColors(
+            key = androidx.compose.ui.graphics.Color.Black,
+            string = androidx.compose.ui.graphics.Color.Black,
+            number = androidx.compose.ui.graphics.Color.Black,
+            keyword = androidx.compose.ui.graphics.Color.Black,
+            comment = androidx.compose.ui.graphics.Color.Gray,
+            punctuation = androidx.compose.ui.graphics.Color.Gray,
+            anchor = androidx.compose.ui.graphics.Color.Gray
+        )
+
+        val result = codeHighlightTransformation(colors, cache)
+            .filter(androidx.compose.ui.text.AnnotatedString("a\nbb"))
+
+        assertEquals("1 │ a\n2 │ bb", result.text.text)
+        assertEquals(4, result.offsetMapping.originalToTransformed(0))
+        assertEquals(5, result.offsetMapping.originalToTransformed(1))
+        assertEquals(10, result.offsetMapping.originalToTransformed(2))
+        assertEquals(0, result.offsetMapping.transformedToOriginal(4))
+        assertEquals(1, result.offsetMapping.transformedToOriginal(5))
+        assertEquals(2, result.offsetMapping.transformedToOriginal(10))
+    }
 }
