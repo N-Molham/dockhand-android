@@ -18,6 +18,15 @@ Unofficial Android client for self-hosted [Dockhand](https://github.com/Finsys/d
 - Stacks: list, detail, start/stop/restart/down/redeploy, compose and .env editing with validation.
 - Images: list, inspect, pull, tag, delete, prune and scan.
 
+## Releases
+
+Run the **Android Build** workflow manually (Actions tab):
+
+- `build_type`: `debug`, `release`, or `both` — always runs tests + lint.
+- `tag_and_release`: when true, creates tag `v<versionName>` at the dispatched commit and publishes a GitHub release with auto-generated changelog notes, attaching the built APK(s).
+
+Bump `version.properties` before releasing; the workflow fails if the tag already exists. Signed release APKs require the four `DOCKHAND_*` repository secrets; without them the release APK is unsigned.
+
 ## Versioning
 
 App version lives in `version.properties` (`versionCode`, `versionName`) and is the single source of truth for Gradle, the Settings screen and CI artifact names.

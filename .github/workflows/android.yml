@@ -11,9 +11,13 @@ on:
           - release
           - both
         default: debug
+      tag_and_release:
+        description: "Tag v<version> and publish a GitHub release with changelog"
+        type: boolean
+        default: false
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: ${{ github.workflow }}
@@ -89,3 +93,25 @@ jobs:
           path: app/build/outputs/apk/release/app-release.apk
           retention-days: 30
           if-no-files-found: ignore
+
+      - name: Tag and publish release
+        if: ${{ inputs.tag_and_release }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.app_version.outputs.version }}
+        run: |
+          if git ls-remote --tags origin "refs/tags/v$VERSION" | grep -q .; then
+            echo "Tag v$VERSION already exists. Bump version.properties before releasing."
+            exit 1
+          fi
+          FILES=""
+          if [ "${{ inputs.build_type }}" != "release" ]; then
+            FILES="$FILES app/build/outputs/apk/debug/app-debug.apk"
+          fi
+          if [ "${{ inputs.build_type }}" != "debug" ]; then
+            FILES="$FILES app/build/outputs/apk/release/app-release.apk"
+          fi
+          gh release create "v$VERSION" $FILES \
+            --title "Dockhand Android v$VERSION" \
+            --generate-notes \
+            --target "$GITHUB_SHA"
