@@ -55,7 +55,8 @@ android {
     buildTypes {
         release {
             isMinifyEnabled = true
-            isShrinkResources = true
+            isShrinkResources = (project.findProperty("dockhand.shrinkResources") as String?)
+                ?.toBoolean() ?: true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -76,6 +77,11 @@ android {
     buildFeatures {
         compose = true
         buildConfig = true
+    }
+
+    lint {
+        checkTestSources = false
+        checkDependencies = false
     }
 
     packaging {

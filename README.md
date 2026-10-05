@@ -27,6 +27,8 @@ Run the **Android Build** workflow manually (Actions tab):
 
 Bump `version.properties` before releasing; the workflow fails if the tag already exists. Signed release APKs require the four `DOCKHAND_*` repository secrets; without them the release APK is unsigned.
 
+CI runs `verify` (tests + lint) and `assemble` in parallel. Regular release builds skip resource shrinking for speed; when `tag_and_release` is true the release APK is built fully shrunk.
+
 ## Versioning
 
 App version lives in `version.properties` (`versionCode`, `versionName`) and is the single source of truth for Gradle, the Settings screen and CI artifact names.
