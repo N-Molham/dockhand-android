@@ -13,7 +13,7 @@ runs:
 
     - name: Accept Android SDK licenses
       shell: bash
-      run: yes | sdkmanager --licenses > /dev/null
+      run: yes | sdkmanager --licenses > /dev/null || true
 
     - name: Install SDK components
       shell: bash
