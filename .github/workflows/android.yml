@@ -15,6 +15,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -75,6 +79,7 @@ jobs:
         with:
           name: dockhand-android-debug-v${{ steps.app_version.outputs.version }}
           path: app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 14
 
       - name: Upload signed release APK
         if: ${{ inputs.build_type != 'debug' }}
@@ -82,4 +87,5 @@ jobs:
         with:
           name: dockhand-android-release-v${{ steps.app_version.outputs.version }}
           path: app/build/outputs/apk/release/app-release.apk
+          retention-days: 30
           if-no-files-found: ignore
