@@ -29,6 +29,8 @@ Bump `version.properties` before releasing; the workflow fails if the tag alread
 
 CI runs `verify` (tests + lint) and `assemble` in parallel. Regular release builds skip resource shrinking for speed; when `tag_and_release` is true the release APK is built fully shrunk.
 
+The `verify` job is a reusable workflow (`.github/workflows/verify.yml`) and can also be dispatched standalone from the Actions tab when you only want tests and lint.
+
 ## Versioning
 
 App version lives in `version.properties` (`versionCode`, `versionName`) and is the single source of truth for Gradle, the Settings screen and CI artifact names.
