@@ -123,8 +123,14 @@ jobs:
             echo "Tag v$VERSION already exists. Bump version.properties before releasing."
             exit 1
           fi
-          ls -la dist
-          gh release create "v$VERSION" dist/*.apk \
+          for f in dist/*.apk; do
+            [ -e "$f" ] || continue
+            kind="$(basename "$f" .apk)"
+            kind="${kind#app-}"
+            cp "$f" "dockhand-android-$kind-v$VERSION.apk"
+          done
+          ls -la dockhand-android-*.apk
+          gh release create "v$VERSION" dockhand-android-*.apk \
             --title "Dockhand Android v$VERSION" \
             --generate-notes \
             --target "$GITHUB_SHA"
