@@ -19,14 +19,14 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: actions/setup-java@v6
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
         with:
           distribution: temurin
           java-version: "17"
 
-      - uses: android-actions/setup-android@v4
+      - uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd # v4.0.4
 
       - name: Accept Android SDK licenses
         run: yes | sdkmanager --licenses > /dev/null
@@ -34,7 +34,7 @@ jobs:
       - name: Install SDK components
         run: sdkmanager "platforms;android-37.0" "build-tools;37.0.0"
 
-      - uses: gradle/actions/setup-gradle@v6
+      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
 
       - name: Read app version
         id: app_version
@@ -71,14 +71,14 @@ jobs:
 
       - name: Upload debug APK
         if: ${{ inputs.build_type != 'release' }}
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: dockhand-android-debug-v${{ steps.app_version.outputs.version }}
           path: app/build/outputs/apk/debug/app-debug.apk
 
       - name: Upload signed release APK
         if: ${{ inputs.build_type != 'debug' }}
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: dockhand-android-release-v${{ steps.app_version.outputs.version }}
           path: app/build/outputs/apk/release/app-release.apk

@@ -1,0 +1,62 @@
+name: Bug report
+description: Report a bug in Dockhand Android
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Do not paste secrets.** Never include API tokens, server URLs, hostnames, IP addresses, keystore material or `.env` contents. Redact sensitive values before posting.
+  - type: input
+    id: app-version
+    attributes:
+      label: App version
+      description: Shown at the top of the Settings screen, e.g. 0.3.3
+    validations:
+      required: true
+  - type: input
+    id: android-version
+    attributes:
+      label: Android version and device
+      placeholder: Android 15, Pixel 8
+    validations:
+      required: true
+  - type: dropdown
+    id: server-connection
+    attributes:
+      label: How is Dockhand reached?
+      options:
+        - HTTPS
+        - HTTP (cleartext enabled)
+        - Not sure
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open ...
+        2. Tap ...
+        3. Observe ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: Include the exact error text from the app if any. No tokens or URLs.
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Optional logs
+      description: Only redacted logs, if you have them.
+    validations:
+      required: false
