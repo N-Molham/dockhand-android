@@ -13,10 +13,14 @@ runs:
 
     - name: Accept Android SDK licenses
       shell: bash
-      run: yes | sdkmanager --licenses > /dev/null || true
+      run: yes | sdkmanager --licenses > /dev/null 2>&1 || true
 
     - name: Install SDK components
       shell: bash
-      run: sdkmanager "platforms;android-37.0" "build-tools;37.0.0"
+      run: |
+        if ! OUTPUT=$(sdkmanager "platforms;android-37.0" "build-tools;37.0.0" 2>&1); then
+          echo "$OUTPUT"
+          exit 1
+        fi
 
     - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
