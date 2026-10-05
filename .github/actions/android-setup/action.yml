@@ -11,13 +11,20 @@ runs:
 
     - uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd # v4.0.4
 
-    - name: Accept Android SDK licenses
-      shell: bash
-      run: yes | sdkmanager --licenses > /dev/null 2>&1 || true
-
     - name: Install SDK components
       shell: bash
       run: |
+        ANDROID_CLI="$(command -v android || true)"
+        if [ -z "$ANDROID_CLI" ] && [ -x "$ANDROID_HOME/cmdline-tools/latest/bin/android" ]; then
+          ANDROID_CLI="$ANDROID_HOME/cmdline-tools/latest/bin/android"
+        fi
+        if [ -n "$ANDROID_CLI" ]; then
+          if "$ANDROID_CLI" sdk install platforms/android-37.0 build-tools/37.0.0; then
+            exit 0
+          fi
+          echo "android sdk install failed, falling back to sdkmanager"
+        fi
+        yes | sdkmanager --licenses > /dev/null 2>&1 || true
         if ! OUTPUT=$(sdkmanager "platforms;android-37.0" "build-tools;37.0.0" 2>&1); then
           echo "$OUTPUT"
           exit 1
